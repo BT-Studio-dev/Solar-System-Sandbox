@@ -6,328 +6,465 @@
       name="viewport"
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#080d17" />
+    <meta name="theme-color" content="#101a2b" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <title>Solar System Sandbox · BT Studio</title>
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="style.css" />
-    <script src="physics.js" defer></script>
-    <script src="app.js" defer></script>
+    <title>Solar System Sandbox · Aero</title>
+    <link rel="icon" href="icon.svg" />
+    <link rel="stylesheet" href="aero/aero.css" />
+    <script src="aero/model.js" defer></script>
+    <script src="aero/aero.js" defer></script>
   </head>
-  <body>
-    <header class="header">
-      <a class="brand" href="#" aria-label="Solar System Sandbox home"
-        ><span class="brand-icon">◉</span
-        ><span
-          >SOLAR SYSTEM<span class="brand-sub"
-            >SANDBOX <i> / </i> BT STUDIO</span
-          ></span
-        ></a
-      >
-      <div class="header-center">
-        <span class="live-dot"></span> YOUR OWN LITTLE UNIVERSE
-      </div>
-      <button class="button quiet" id="help-btn">
-        <span class="help-symbol">?</span> <span>How to play</span>
-      </button>
+  <body data-theme="night">
+    <header class="titlebar">
+      <span class="app-orbit">◉</span><strong>Solar System Sandbox</strong
+      ><span class="edition"
+        >SIMULATOR · <span id="theme-name">AERO NIGHT</span></span
+      ><a href="classic.html" class="classic-link">Classic sandbox ↗</a>
     </header>
-    <div class="toolbar">
-      <div class="toolbar-title">
-        <span class="tiny-label">EXPERIMENT 001</span>
-        <h1>The solar system <span class="tag">N-BODY</span></h1>
+    <div class="topbar">
+      <button id="play" class="play blue" aria-label="Pause simulation">
+        Ⅱ
+      </button>
+      <div class="speed-block">
+        <label class="eyebrow" for="speed">SIMULATION SPEED</label>
+        <div class="speed-row">
+          <input
+            type="range"
+            id="speed"
+            min="-2"
+            max="2.5623"
+            value="0"
+            step="0.01"
+          /><output id="speed-value">1.00 day/s</output>
+        </div>
       </div>
-      <div class="toolbar-actions">
-        <button class="button" id="save-btn" title="Save to this device">
-          ↓ <span>Save</span></button
-        ><button class="button" id="load-btn" title="Load saved sandbox">
-          ↑ <span>Load</span></button
-        ><span class="divider"></span
-        ><button class="button" id="reset-btn">↺ <span>Reset</span></button
-        ><button class="button primary" id="add-btn">
-          + <span>Add a planet</span>
+      <div class="epoch-block">
+        <span class="eyebrow">EPOCH (UTC)</span>
+        <div>
+          <button id="epoch" title="Set simulation date">
+            19 OCT 2026 00:00</button
+          ><button id="now">NOW</button>
+        </div>
+      </div>
+      <div class="scenario-block">
+        <label class="eyebrow" for="scenario">SCENARIO</label
+        ><select id="scenario"></select>
+      </div>
+      <div class="top-actions">
+        <button
+          id="gravity"
+          class="pill"
+          aria-pressed="false"
+          title="Switch all primary bodies between orbital rails and live gravity"
+        >
+          ◌ Gravity off</button
+        ><button
+          id="save"
+          class="square"
+          aria-label="Save simulator"
+          title="Save on this device"
+        >
+          ▣</button
+        ><button
+          id="load"
+          class="square"
+          aria-label="Load simulator"
+          title="Load saved simulator"
+        >
+          ▱</button
+        ><button
+          id="themes-btn"
+          class="square"
+          aria-label="Choose theme"
+          title="Themes (F3)"
+        >
+          ▦</button
+        ><button
+          id="help-btn"
+          class="square"
+          aria-label="Help"
+          title="Help (F1)"
+        >
+          ?</button
+        ><button
+          id="sidebar-btn"
+          class="square mobile-only"
+          aria-label="Toggle inspector"
+        >
+          ☰
         </button>
       </div>
     </div>
-    <main class="workspace">
-      <aside class="body-panel" id="body-panel" aria-label="Celestial bodies">
-        <div class="panel-heading">
-          <span>CELESTIAL BODIES</span
-          ><span class="count" id="body-count">09</span>
-        </div>
-        <div id="body-list" class="body-list"></div>
-        <div class="panel-bottom">
-          <span class="live-dot"></span> All bodies interact through gravity.
-          <p>Small changes. Endless possibilities.</p>
-        </div>
-      </aside>
-      <section
-        class="universe"
-        id="universe"
-        aria-label="Interactive solar system"
-      >
+    <main>
+      <section id="sky" class="sky" aria-label="Interactive orbital simulator">
         <canvas
-          id="space"
+          id="universe"
           tabindex="0"
-          aria-label="Solar system simulation. Select planets using the celestial bodies list. Use Add a planet to place a custom body."
+          aria-label="Drag to pan; right-drag to orbit. Use the Body selector in the inspector for keyboard-accessible selection."
         ></canvas>
-        <div class="view-label">
-          <span class="view-dot"></span><span id="view-title">SOLAR SYSTEM</span
-          ><span class="view-label-sub">TOP-DOWN VIEW</span>
+        <div class="scene-title">
+          <h1 id="scene-name">Solar System</h1>
+          <span id="scene-count">40 bodies</span>
+          <div id="tracking-badge" hidden>
+            TRACKING <span></span
+            ><button id="untrack" aria-label="Stop tracking">×</button>
+          </div>
         </div>
-        <button
-          class="button mobile-bodies"
-          id="bodies-btn"
-          aria-expanded="false"
+        <div class="view-toolbar" aria-label="View controls">
+          <button
+            id="toggle-orbits"
+            class="on"
+            aria-pressed="true"
+            title="Toggle orbits"
+          >
+            ◎</button
+          ><button
+            id="toggle-labels"
+            class="on"
+            aria-pressed="true"
+            title="Toggle labels"
+          >
+            Aa</button
+          ><button
+            id="toggle-trails"
+            class="on"
+            aria-pressed="true"
+            title="Toggle trails"
+          >
+            ∴</button
+          ><button
+            id="toggle-moons"
+            class="on"
+            aria-pressed="true"
+            title="Toggle moons"
+          >
+            ◉</button
+          ><button id="measure-btn" title="Object separation">↔</button
+          ><span></span><button id="zoom-in" aria-label="Zoom in">+</button
+          ><button id="zoom-out" aria-label="Zoom out">−</button
+          ><button
+            id="reset-view"
+            aria-label="Reset camera"
+            title="Reset camera"
+          >
+            ↻</button
+          ><button
+            id="settings-btn"
+            aria-label="Simulation controls"
+            title="Simulation controls (C)"
+          >
+            ☷
+          </button>
+        </div>
+        <div class="scale-bar"><span id="scale-label">2 AU</span><i></i></div>
+        <div id="hover-tip" class="hover-tip" hidden></div>
+        <div
+          id="notification"
+          class="notification"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+        <section
+          id="settings"
+          class="floating-panel"
+          hidden
+          aria-label="Simulation settings"
         >
-          ☰ Bodies
-        </button>
-        <button class="button mobile-info" id="info-btn" aria-expanded="false">
-          Body info
-        </button>
-        <div class="view-tools">
-          <button class="icon-button" id="zoom-in" aria-label="Zoom in">
-            +</button
-          ><button class="icon-button" id="zoom-out" aria-label="Zoom out">
-            −</button
-          ><span></span
-          ><button
-            class="icon-button"
-            id="fit-btn"
-            aria-label="Fit solar system"
-            title="Fit solar system"
-          >
-            Fit
-          </button>
-        </div>
-        <div class="view-bottom">
-          <span
-            ><i class="crosshair">+</i>
-            <span id="view-hint">Scroll to zoom · Right-drag to pan</span></span
-          ><span id="zoom-label">100%</span>
-        </div>
-        <div class="spawn-hint" id="spawn-hint" hidden>
-          Click empty space to place your planet
-          <button id="cancel-spawn">Cancel</button>
-        </div>
-      </section>
-      <aside
-        class="inspector"
-        id="inspector"
-        aria-label="Selected body details"
-      >
-        <div class="panel-heading">
-          <span>BODY INSPECTOR</span
-          ><span class="muted inspector-arrow">↗</span
-          ><button
-            class="close-inspector"
-            id="close-inspector"
-            aria-label="Close body inspector"
-          >
-            ×
-          </button>
-        </div>
-        <div class="planet-preview" id="planet-preview">
-          <div class="planet-sphere" id="planet-sphere"></div>
-          <span class="preview-orbit"></span>
-        </div>
-        <div class="selected-heading">
-          <div class="tiny-label" id="body-kind">TERRESTRIAL PLANET</div>
-          <h2 id="body-name">Earth</h2>
-          <p id="body-description">Our pale blue dot.</p>
-        </div>
-        <dl class="properties">
-          <div>
-            <dt>Mass</dt>
-            <dd id="mass-value">1.00 <small>Earths</small></dd>
+          <div class="panel-title">
+            <span>SIMULATION</span
+            ><button id="close-settings" aria-label="Close simulation controls">
+              ×
+            </button>
           </div>
-          <div>
-            <dt>Distance to Sun</dt>
-            <dd id="distance-value">1.00 <small>AU</small></dd>
+          <label class="eyebrow" for="start-date">START DATE (UTC)</label
+          ><input
+            id="start-date"
+            type="date"
+            min="1000-01-01"
+            max="9999-12-31"
+            value="2026-10-19"
+          />
+          <div class="two-col date-actions">
+            <button id="set-date" class="blue">SET START DATE</button
+            ><button id="date-now">NOW</button>
           </div>
-          <div>
-            <dt>Relative speed</dt>
-            <dd id="velocity-value">29.78 <small>km/s</small></dd>
+          <div class="eyebrow section-label">VIEW</div>
+          <div class="check-grid">
+            <label><input id="orbits" type="checkbox" checked /> Orbits</label
+            ><label><input id="fade" type="checkbox" /> Fade orbits</label
+            ><label><input id="labels" type="checkbox" checked /> Labels</label
+            ><label><input id="moon-names" type="checkbox" /> Moon names</label
+            ><label><input id="show-sun" type="checkbox" checked /> Sun</label
+            ><label><input id="axes" type="checkbox" /> Axes</label
+            ><label><input id="true-scale" type="checkbox" /> True sizes</label
+            ><label><input id="trails" type="checkbox" checked /> Trails</label
+            ><label><input id="moons" type="checkbox" checked /> Moons</label>
           </div>
-          <div>
-            <dt>
-              Orbital period
-              <span
-                title="Estimate for a circular orbit at the current distance"
-                >i</span
-              >
-            </dt>
-            <dd id="period-value">1.00 <small>years</small></dd>
+          <label class="eyebrow section-label" for="auto-track"
+            >AUTO TRACK</label
+          ><select id="auto-track"></select>
+          <div class="eyebrow section-label">OBJECT SEPARATION</div>
+          <div class="two-col">
+            <select id="measure-a" aria-label="First object"></select
+            ><select id="measure-b" aria-label="Second object"></select>
           </div>
-        </dl>
-        <button class="button full" id="follow-btn">Follow body</button>
-        <button class="button danger full" id="remove-btn">Remove body</button>
-        <div class="display-options">
-          <div class="tiny-label">DISPLAY OPTIONS</div>
-          <label
-            ><span>Orbit guides</span
-            ><input
-              type="checkbox"
-              id="orbits-toggle"
-              checked
-              role="switch" /></label
-          ><label
-            ><span>Motion trails</span
-            ><input
-              type="checkbox"
-              id="trails-toggle"
-              checked
-              role="switch" /></label
-          ><label
-            ><span>Planet labels</span
-            ><input
-              type="checkbox"
-              id="labels-toggle"
-              checked
-              role="switch" /></label
-          ><label
-            ><span>Compress distances</span
-            ><input type="checkbox" id="scale-toggle" checked role="switch"
-          /></label>
-        </div>
-        <div class="scale-note">
-          <span>i</span>
-          <p>
-            Space, made a little closer.<br />Sizes are exaggerated; distances
-            are compressed for visibility. Gravity uses real AU and solar
-            masses.
+          <div class="separation">
+            <output id="separation-au">1.0000 AU</output
+            ><small id="separation-km"></small>
+          </div>
+          <p class="model-note">
+            Approximate Keplerian rails, not a precision ephemeris. Live gravity
+            is softened; no collision merging.
           </p>
-        </div>
+        </section>
+      </section>
+      <aside id="sidebar">
+        <nav class="tabs" aria-label="Inspector tabs">
+          <button
+            data-tab="inspect"
+            class="active"
+            role="tab"
+            aria-selected="true"
+          >
+            INSPECT</button
+          ><button data-tab="create" role="tab" aria-selected="false">
+            CREATE</button
+          ><button data-tab="library" role="tab" aria-selected="false">
+            LIBRARY
+          </button>
+        </nav>
+        <section id="inspect-panel" class="tab-panel">
+          <label class="sr-only" for="body-select">Select body</label
+          ><select id="body-select" class="body-select"></select>
+          <div class="body-heading">
+            <span id="body-dot"></span>
+            <h2 id="body-name">Earth</h2>
+          </div>
+          <p id="body-type">Terrestrial planet</p>
+          <div class="stat-grid">
+            <div>
+              <label>DISTANCE</label><strong id="body-distance">1.00 AU</strong
+              ><small>from parent / origin</small>
+            </div>
+            <div>
+              <label>ORBITAL PERIOD</label
+              ><strong id="body-period">1.00y</strong
+              ><small>reference orbit</small>
+            </div>
+            <div>
+              <label>ROTATION</label><strong id="body-rotation">23h 56m</strong
+              ><small>one local day</small>
+            </div>
+            <div>
+              <label>RADIUS</label><strong id="body-radius">6371 km</strong
+              ><small id="body-mass">5.97e24 kg</small>
+            </div>
+          </div>
+          <blockquote id="body-note">
+            The only world known to carry liquid-water oceans.
+          </blockquote>
+          <div class="two-col inspect-actions">
+            <button id="focus" class="blue">⌾ Focus</button
+            ><button id="follow">∞ Follow</button
+            ><button id="release">◌ Release to gravity</button
+            ><button id="remove" class="red">Remove</button
+            ><button id="save-part" class="wide">+ Save body to library</button>
+          </div>
+          <div class="subheading">
+            <span>SATELLITES</span><small id="moon-count">1 moon</small>
+          </div>
+          <div id="satellite-list" class="satellite-list"></div>
+          <div class="quick-actions">
+            <div class="eyebrow">QUICK ACTIONS</div>
+            <div class="two-col">
+              <button id="spawn-asteroid">Spawn asteroid</button
+              ><button id="spawn-comet">Spawn comet</button
+              ><button id="clear-trails">Clear trails</button
+              ><button id="empty">Empty sky</button>
+            </div>
+          </div>
+        </section>
+        <section id="create-panel" class="tab-panel" hidden>
+          <div class="eyebrow">BODY TYPE</div>
+          <div id="body-types" class="type-grid"></div>
+          <form id="create-form">
+            <label class="eyebrow name-label" for="new-name"
+              >NAME <span>optional</span></label
+            ><input
+              id="new-name"
+              maxlength="40"
+              placeholder="New world"
+              autocomplete="off"
+            />
+            <div class="slider-heading">
+              <label class="eyebrow" for="mass">MASS</label
+              ><output id="mass-output">1.00× Earth</output>
+            </div>
+            <input
+              id="mass"
+              class="mass-slider"
+              type="range"
+              min="-8"
+              max="6"
+              value="0"
+              step="0.01"
+            />
+            <div id="mass-kg" class="mono detail">5.97e24 kg</div>
+            <div class="slider-heading">
+              <label class="eyebrow" for="radius">RADIUS</label
+              ><output id="radius-output">6371 km</output>
+            </div>
+            <input
+              id="radius"
+              class="radius-slider"
+              type="range"
+              min="0"
+              max="6"
+              value="3.8042"
+              step="0.001"
+            />
+            <div class="slider-heading orbit-heading">
+              <label class="eyebrow" for="orbit-radius">ORBIT RADIUS</label
+              ><output id="orbit-output">1.51 AU</output>
+            </div>
+            <input
+              id="orbit-radius"
+              type="range"
+              min="-1.30103"
+              max="2.30103"
+              value="0.179"
+              step="0.005"
+            />
+            <div class="period-detail">
+              <span>Orbital period</span
+              ><output id="orbit-period">1.86y</output>
+            </div>
+            <button id="add-body" type="submit" class="blue add-button">
+              + Add to sandbox
+            </button>
+          </form>
+          <p class="model-note">
+            New bodies use live gravity. Existing rail bodies keep their
+            approximate paths until released. Body sizes are exaggerated for
+            visibility.
+          </p>
+          <div class="scenario-list-heading eyebrow">SCENARIOS</div>
+          <div id="scenario-list"></div>
+        </section>
+        <section id="library-panel" class="tab-panel" hidden>
+          <div id="library-count" class="eyebrow">
+            3 PARTS · 2 COLOUR PACKS · 1 SCENARIO
+          </div>
+          <div class="two-col library-actions">
+            <button id="rescan">↻ RELOAD</button
+            ><button id="reset-library">RESET LIBRARY</button>
+          </div>
+          <div class="subheading">
+            PARTS <span class="subtle">LOCAL DEVICE</span>
+          </div>
+          <div id="part-list"></div>
+          <div class="subheading">COLOUR PACKS</div>
+          <div id="pack-list"></div>
+          <div class="subheading">SCENARIO PRESETS</div>
+          <button id="binary-preset" class="library-row">
+            <span class="row-symbol">∞</span
+            ><span
+              ><strong>Binary Stars</strong
+              ><small>Two suns, three worlds · built-in scenario</small></span
+            ><em>USE</em>
+          </button>
+          <p class="model-note">
+            Parts are saved on this device. Colour packs are procedural
+            palettes, not external texture files. No executable mods or folder
+            scanning.
+          </p>
+        </section>
       </aside>
     </main>
-    <footer class="transport">
-      <div class="playback">
-        <button class="play-button" id="play-btn" aria-label="Pause simulation">
-          Ⅱ
-        </button>
-        <div>
-          <span class="tiny-label" id="simulation-state"
-            >SIMULATION RUNNING</span
-          >
-          <div class="elapsed">
-            <span id="elapsed">0.00</span> <small>years elapsed</small>
-          </div>
-        </div>
-      </div>
-      <div class="speed-control">
-        <span class="tiny-label">TIME SPEED</span>
-        <div class="speed-options" aria-label="Simulation speed">
-          <button data-speed="0.05">0.05×</button
-          ><button data-speed="0.2" class="active">0.2×</button
-          ><button data-speed="1">1×</button><button data-speed="5">5×</button>
-        </div>
-        <span class="speed-note">1× = 1 year / second</span>
-      </div>
-      <div class="system-status">
-        <span class="live-dot"></span><span id="status-count">9 bodies</span
-        ><span class="status-divider">/</span><span>Newtonian gravity</span>
-      </div>
+    <footer>
+      <span id="status">40 bodies · orbital rails · running</span
+      ><span class="keyboard-hints"
+        >SPACE play &nbsp; LMB pan &nbsp; RMB orbit &nbsp; wheel zoom &nbsp; C
+        controls &nbsp; F1 help</span
+      ><span id="performance">60 fps</span>
     </footer>
-    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <dialog id="add-dialog">
-      <form id="add-form">
-        <div class="dialog-eyebrow">MAKE SPACE FOR SOMETHING NEW</div>
-        <h2>Add a little world.</h2>
-        <p>
-          Choose a planet, then tap anywhere in space.<br />We’ll give it a
-          circular orbit around the Sun.
-        </p>
-        <label class="field"
-          >Planet name<input
-            id="new-name"
-            type="text"
-            maxlength="40"
-            placeholder="My new world"
-            autocomplete="off" /></label
-        ><label class="field"
-          >Planet type<select id="new-type">
-            <option value="rocky">Rocky planet</option>
-            <option value="giant">Gas giant</option>
-          </select></label
-        ><label class="field"
-          >Mass <span>(Earth masses)</span
-          ><input
-            id="new-mass"
-            type="number"
-            value="1"
-            min="0.01"
-            max="1000"
-            step="0.01"
-            required /></label
-        ><label class="field"
-          >Starting motion<select id="new-motion">
-            <option value="orbit">Circular orbit</option>
-            <option value="retrograde">Reverse orbit</option>
-            <option value="stationary">Stationary (fall toward the Sun)</option>
-          </select></label
-        >
-        <div class="dialog-actions">
-          <button type="button" class="button" id="close-add">Cancel</button
-          ><button type="submit" class="button primary">
-            Choose position →
-          </button>
-        </div>
-      </form>
-    </dialog>
+    <section
+      id="themes"
+      class="theme-menu floating-panel"
+      hidden
+      aria-label="Theme selection"
+    >
+      <div class="panel-title"><span>THEME</span><span>F3 cycles</span></div>
+      <div id="theme-list"></div>
+    </section>
     <dialog id="help-dialog">
-      <div class="dialog-eyebrow">WELCOME, EXPLORER</div>
-      <h2>A universe to play with.</h2>
+      <div class="panel-title">
+        SOLAR SYSTEM SANDBOX · AERO<button
+          id="close-help"
+          aria-label="Close help"
+        >
+          ×
+        </button>
+      </div>
+      <h2>Your universe, a new perspective.</h2>
       <p>
-        A real, interactive N-body gravity simulation. All nine starting bodies
-        attract one another; your planets join the experiment.
+        Inspired by your Aero simulator references. The classic sandbox is still
+        available from the title bar.
       </p>
-      <div class="help-row">
-        <b>Explore</b
-        ><span
-          >Select a planet in space or in the list. Scroll or pinch to zoom.
-          Right-drag or two-finger drag to pan.</span
-        >
-      </div>
-      <div class="help-row">
-        <b>Experiment</b
-        ><span
-          >Add planets, change their mass, or try a reverse orbit. Follow a body
-          to keep it in view.</span
-        >
-      </div>
-      <div class="help-row">
-        <b>Take control</b
-        ><span
-          >Space: pause · +/−: zoom · R: reset · Esc: cancel placement. Save and
-          Load store one sandbox on this device.</span
-        >
-      </div>
-      <div class="help-row">
-        <b>A few limits</b
-        ><span
-          >Distances are visually compressed by default, not to scale.
-          Near-collision gravity is softened; bodies do not merge. This is an
-          educational toy, not an ephemeris.</span
-        >
-      </div>
-      <p class="help-offline">
-        Works entirely offline. No accounts. No tracking.
+      <dl>
+        <dt>Explore</dt>
+        <dd>
+          Click a body to inspect. Left-drag to pan; right-drag to rotate the
+          orbital plane. Scroll or pinch to zoom. Use the body selector for
+          distant worlds.
+        </dd>
+        <dt>Create</dt>
+        <dd>
+          Choose one of eight body types, adjust mass, radius and orbit, then
+          add it. New bodies use gravity; existing bodies stay on approximate
+          Keplerian rails.
+        </dd>
+        <dt>Focus / Follow</dt>
+        <dd>
+          Focus zooms toward the selected body. Follow keeps it centered. Use
+          the reset-camera button to return to the overview.
+        </dd>
+        <dt>Gravity</dt>
+        <dd>
+          Release one body or switch primary bodies to live gravity. Moons stay
+          on parent-relative rails unless individually released. No collision
+          merging.
+        </dd>
+        <dt>Library</dt>
+        <dd>
+          Use built-in parts, save your own, change colour packs, or load the
+          binary-star scenario. The library is local; it does not load
+          executable mods.
+        </dd>
+        <dt>Controls</dt>
+        <dd>
+          Space: play/pause · C: settings · F1: help · F3: theme · Escape: close
+          panels · +/−: zoom. Save/Load keep one Aero experiment on this device.
+        </dd>
+      </dl>
+      <p class="model-note">
+        Dates drive approximate orbital elements, not observed real-time
+        positions. Moon distances and body sizes are exaggerated unless True
+        sizes is enabled. Offline. No accounts or tracking.
       </p>
-      <button class="button primary full" id="close-help">
-        Let’s explore →
-      </button>
     </dialog>
     <dialog id="confirm-dialog">
-      <h2>Start fresh?</h2>
-      <p>
-        This resets the planets and elapsed time. Your saved sandbox won’t be
-        changed.
+      <h2 id="confirm-title">Start a new scenario?</h2>
+      <p id="confirm-message">
+        Unsaved changes will be replaced. Your stored save is not changed.
       </p>
-      <div class="dialog-actions">
-        <button class="button" id="cancel-reset">Keep exploring</button
-        ><button class="button primary" id="confirm-reset">Reset system</button>
+      <div class="two-col">
+        <button id="confirm-cancel">Cancel</button
+        ><button id="confirm-ok" class="blue">Continue</button>
       </div>
     </dialog>
   </body>

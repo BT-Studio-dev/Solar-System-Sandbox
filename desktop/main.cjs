@@ -1,6 +1,7 @@
 "use strict";
 const { app, BrowserWindow, session, Menu } = require("electron");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 // All content is bundled. No remote URLs, Node integration, or renderer IPC.
 app.setAppUserModelId("dev.btstudio.solarsystem");
@@ -34,7 +35,14 @@ app.whenReady().then(() => {
       },
     });
     window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    window.webContents.on("will-navigate", (event) => event.preventDefault());
+    const allowedPages = new Set(
+      ["index.html", "classic.html"].map(
+        (name) => pathToFileURL(path.join(__dirname, "..", "web", name)).href,
+      ),
+    );
+    window.webContents.on("will-navigate", (event, url) => {
+      if (!allowedPages.has(url)) event.preventDefault();
+    });
     window.loadFile(path.join(__dirname, "..", "web", "index.html"));
     window.on("closed", () => {
       window = null;

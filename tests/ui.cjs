@@ -39,7 +39,7 @@ const { chromium: playwright } = require("playwright-core");
   let browser;
   try {
     browser = await playwright.launch({
-      args: chromium.args,
+      args: chromium.args.filter((arg) => arg !== "--single-process"),
       executablePath: await chromium.executablePath(),
       headless: true,
     });
@@ -50,7 +50,7 @@ const { chromium: playwright } = require("playwright-core");
     page.on("pageerror", (error) => errors.push(error.message));
     const base = process.env.BASE_URL || "http://127.0.0.1:3001";
     try {
-      await page.goto(base);
+      await page.goto(base + "/classic.html");
       await page.waitForSelector(".body-item");
       assert.equal(await page.locator(".body-item").count(), 9);
       assert.equal(await page.locator("#body-name").textContent(), "Earth");
@@ -145,6 +145,8 @@ const { chromium: playwright } = require("playwright-core");
       console.log("PASS mobile: responsive layout, body drawer, selection");
       assert.deepEqual(errors, []);
       console.log("PASS no browser JavaScript errors");
+      await page.close();
+      await require("./aero-ui.cjs")(browser, base);
     } finally {
       if (browser) await browser.close();
     }

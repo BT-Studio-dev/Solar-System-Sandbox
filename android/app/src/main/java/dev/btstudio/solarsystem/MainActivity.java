@@ -33,7 +33,10 @@ public final class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(true);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return true; // No navigation or external browser launches.
+                String url = request.getUrl().toString();
+                // Only the two bundled app modes may navigate. External URLs stay blocked.
+                return !(url.equals(ORIGIN) || url.equals(ORIGIN + "index.html") ||
+                    url.equals(ORIGIN + "classic.html"));
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
