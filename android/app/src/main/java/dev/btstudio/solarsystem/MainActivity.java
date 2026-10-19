@@ -58,7 +58,22 @@ public final class MainActivity extends Activity {
                     null, new ByteArrayInputStream(new byte[0]));
             }
         });
-        setContentView(web);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(this);
+        container.addView(web, new android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+        // Android 15 enforces edge-to-edge for target SDK 35. Keep controls clear
+        // of the status/navigation bars and display cutouts on those devices.
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            container.setOnApplyWindowInsetsListener((view, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(
+                    android.view.WindowInsets.Type.systemBars() |
+                    android.view.WindowInsets.Type.displayCutout());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                return insets;
+            });
+        }
+        setContentView(container);
         web.loadUrl(ORIGIN);
     }
     @Override protected void onPause() {
