@@ -229,6 +229,7 @@
     resetCamera();
     if (id === "inner") setZoom(3);
     if (id === "outer") setZoom(0.35);
+    if (id === "trappist") setZoom(42);
     $("scenario").value = id;
     rebuildSelectors();
     renderScenarios();
@@ -1215,13 +1216,65 @@
   $("zoom-in").addEventListener("click", () => setZoom(zoom * 1.4));
   $("zoom-out").addEventListener("click", () => setZoom(zoom / 1.4));
   $("reset-view").addEventListener("click", resetCamera);
+  function makeSaveFile() {
+    return {
+      app: "solar-system-sandbox",
+      format: 1,
+      exportedAt: new Date().toISOString(),
+      state,
+      theme,
+      pack,
+      view: { ...view },
+      selected,
+      rate,
+    };
+  }
+  function validateSaveFile(data) {
+    if (
+      !data ||
+      data.app !== "solar-system-sandbox" ||
+      data.format !== 1 ||
+      typeof data.theme !== "string" ||
+      !themes.some((t) => t[0] === data.theme) ||
+      !["theme", "blue", "dust"].includes(data.pack) ||
+      !data.view ||
+      Object.values(data.view).some((value) => typeof value !== "boolean") ||
+      !Number.isFinite(data.rate) ||
+      data.rate < 0.01 ||
+      data.rate > 365 ||
+      typeof data.selected !== "string"
+    )
+      throw new Error("Unsupported or invalid version 2 save file");
+    return { ...data, state: M.validateSave(data.state) };
+  }
+  function applySaveFile(raw) {
+    // Validate the entire file before changing any in-memory state.
+    const data = validateSaveFile(raw);
+    state = data.state;
+    selected = state.bodies.some((b) => b.id === data.selected)
+      ? data.selected
+      : state.bodies[0]?.id || "";
+    setTheme(data.theme, false);
+    pack = data.pack;
+    Object.keys(view).forEach((id) => {
+      if (typeof data.view[id] === "boolean") setting(id, data.view[id]);
+    });
+    rate = data.rate;
+    $("speed").value = Math.log10(rate);
+    $("speed-value").textContent = rate.toFixed(2) + " day/s";
+    trails.clear();
+    orbitPaths.clear();
+    resetCamera();
+    rebuildSelectors();
+    renderScenarios();
+    $("scenario").value = state.scenario;
+    updateUI();
+    updateCreation();
+  }
   $("save").addEventListener("click", () => {
     try {
-      localStorage.setItem(
-        "aero-save-v2",
-        JSON.stringify({ state, theme, pack, view, selected, rate }),
-      );
-      notify("Aero experiment saved on this device");
+      localStorage.setItem("aero-save-v2", JSON.stringify(makeSaveFile()));
+      notify("Version 2 experiment saved on this device");
     } catch (_) {
       notify("Could not save: device storage unavailable or full");
     }
@@ -1230,35 +1283,77 @@
     try {
       const text = localStorage.getItem("aero-save-v2");
       if (!text) {
-        notify("No Aero save yet. Use Save to keep this experiment.");
+        notify("No local save yet. Use Save to keep this experiment.");
         return;
       }
-      const data = JSON.parse(text),
-        loaded = M.validateSave(data.state);
-      state = loaded;
-      selected = state.bodies.some((b) => b.id === data.selected)
-        ? data.selected
-        : state.bodies[0]?.id || "";
-      if (themes.some((t) => t[0] === data.theme)) setTheme(data.theme, false);
-      if (["theme", "blue", "dust"].includes(data.pack)) pack = data.pack;
-      Object.keys(view).forEach((id) => {
-        if (typeof data.view?.[id] === "boolean") setting(id, data.view[id]);
-      });
-      if (Number.isFinite(data.rate) && data.rate >= 0.01 && data.rate <= 365) {
-        rate = data.rate;
-        $("speed").value = Math.log10(rate);
-        $("speed-value").textContent = rate.toFixed(2) + " day/s";
+      const stored = JSON.parse(text);
+      if (!stored.app && stored.state?.version === 2) {
+        stored.app = "solar-system-sandbox";
+        stored.format = 1;
+        stored.exportedAt = new Date().toISOString();
+        stored.theme = themes.some((t) => t[0] === stored.theme)
+          ? stored.theme
+          : "night";
+        stored.pack = ["theme", "blue", "dust"].includes(stored.pack)
+          ? stored.pack
+          : "theme";
+        stored.view = { ...view, ...(stored.view || {}) };
+        stored.rate =
+          Number.isFinite(stored.rate) &&
+          stored.rate >= 0.01 &&
+          stored.rate <= 365
+            ? stored.rate
+            : 1;
+        stored.selected =
+          typeof stored.selected === "string" ? stored.selected : "";
       }
-      trails.clear();
-      resetCamera();
-      rebuildSelectors();
-      renderScenarios();
-      $("scenario").value = state.scenario;
-      updateUI();
-      updateCreation();
-      notify("Saved Aero experiment loaded");
-    } catch (_) {
+      applySaveFile(stored);
+      notify("Saved version 2 experiment loaded");
+    } catch (error) {
       notify("Could not load this save. Current experiment unchanged.");
+    }
+  });
+  $("export-json").addEventListener("click", () => {
+    try {
+      const contents = JSON.stringify(makeSaveFile(), null, 2);
+      const filename = "solar-system-v2-" + state.scenario + ".json";
+      if (
+        window.AndroidAero &&
+        typeof window.AndroidAero.saveJson === "function"
+      ) {
+        window.AndroidAero.saveJson(filename, contents);
+        notify("Choose where to save the portable JSON file");
+        return;
+      } else {
+        const blob = new Blob([contents], { type: "application/json" });
+        const url = URL.createObjectURL(blob),
+          link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      notify("Portable version 2 JSON exported");
+    } catch (_) {
+      notify("Could not export this experiment");
+    }
+  });
+  $("import-json").addEventListener("click", () => $("import-file").click());
+  $("import-file").addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > 1000000) {
+      notify("JSON save is too large (maximum 1 MB)");
+      return;
+    }
+    try {
+      applySaveFile(JSON.parse(await file.text()));
+      notify("Version 2 experiment imported");
+    } catch (_) {
+      notify("Import rejected. Current experiment is unchanged.");
     }
   });
   themes.forEach(([id, name, desc, bg, accent]) => {
@@ -1321,6 +1416,23 @@
     }
     if (e.key.toLowerCase() === "c" && !e.ctrlKey && !e.metaKey)
       $("settings").hidden = !$("settings").hidden;
+    if (
+      (e.target === canvas || e.target === document.body) &&
+      ["ArrowRight", "ArrowLeft"].includes(e.key)
+    ) {
+      e.preventDefault();
+      const selectable = state.bodies.filter(
+        (b) => b.type !== "moon" || view.moons,
+      );
+      const index = Math.max(
+        0,
+        selectable.findIndex((b) => b.id === selected),
+      );
+      const next =
+        (index + (e.key === "ArrowRight" ? 1 : -1) + selectable.length) %
+        selectable.length;
+      if (selectable[next]) select(selectable[next].id, false);
+    }
     if (e.key === "F1") {
       e.preventDefault();
       $("help-dialog").showModal();

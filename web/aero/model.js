@@ -17,6 +17,11 @@
     ["outer", "Outer System", "Ice giants, Pluto and distant worlds"],
     ["binary", "Binary Star", "Two suns and three circumbinary planets"],
     ["empty", "Empty Sandbox", "An empty sky: build your own system"],
+    [
+      "trappist",
+      "TRAPPIST-1",
+      "Seven Earth-sized worlds around an ultracool dwarf",
+    ],
   ];
   const TYPES = {
     star: { label: "Star", mass: 332946, radius: 696340, color: "#ffd079" },
@@ -185,6 +190,7 @@
       ),
     );
     [
+      ["1I/Oumuamua", 1.28, 0.98, 0.44, 2.4],
       ["Halley", 17.8, 0.967, 2.83, 0.2],
       ["Encke", 2.22, 0.848, 0.21, 4.5],
       ["Tempel 1", 3.12, 0.517, 0.18, 2.2],
@@ -228,6 +234,57 @@
           (b.type === "moon" && groups[id].includes(b.parent)),
       );
     if (id === "empty") bodies = [];
+    if (id === "trappist") {
+      const star = body(
+        "TRAPPIST-1",
+        "star",
+        0,
+        0.089 / EARTH,
+        84300,
+        "#f17d64",
+        0,
+        {
+          parent: null,
+          rotation: "3.3d",
+          note: "An ultracool red dwarf 40 light-years away, orbited by seven known terrestrial worlds.",
+        },
+      );
+      bodies = [star];
+      [
+        ["TRAPPIST-1 b", 0.01154, 1.374, 1.116, 1.5109],
+        ["TRAPPIST-1 c", 0.0158, 1.308, 1.097, 2.4218],
+        ["TRAPPIST-1 d", 0.02227, 0.388, 0.788, 4.0496],
+        ["TRAPPIST-1 e", 0.02925, 0.692, 0.92, 6.0996],
+        ["TRAPPIST-1 f", 0.03849, 1.039, 1.045, 9.2067],
+        ["TRAPPIST-1 g", 0.04683, 1.321, 1.129, 12.3529],
+        ["TRAPPIST-1 h", 0.06189, 0.326, 0.755, 18.7729],
+      ].forEach(([name, a, mass, radius, period], i) => {
+        bodies.push(
+          body(
+            name,
+            "terrestrial",
+            a,
+            mass,
+            radius * 6371,
+            [
+              "#eaa28a",
+              "#dd987b",
+              "#a8d6bb",
+              "#74cbbd",
+              "#7aa6d5",
+              "#7e91cf",
+              "#d7c2a2",
+            ][i],
+            0.4 + i * 0.91,
+            {
+              parent: star.id,
+              period,
+              note: "A compact, Earth-sized exoplanet. Approximate published orbital period and radius; not an observed ephemeris.",
+            },
+          ),
+        );
+      });
+    }
     if (id === "binary") {
       bodies = [
         body("Sun", "star", 0.35, 0.65 / EARTH, 510000, "#ffce81", 0, {
@@ -311,10 +368,12 @@
       updateRails(state);
       return;
     }
-    // Moon periods demand smaller steps. Cap total work and slow simulated time, never skip steps.
+    // Compact live orbits (especially moons and close-in exoplanets) demand smaller steps. Cap work and slow time rather than skipping steps.
     let h = 0.25;
     live.forEach((b) => {
-      if (b.type === "moon") h = Math.min(h, Math.abs(b.period || 1) / 80);
+      if (Number.isFinite(b.period) && b.period !== 0) {
+        h = Math.min(h, Math.abs(b.period) / 80);
+      }
     });
     const actual = Math.min(days, h * 200),
       n = Math.max(1, Math.ceil(actual / h));

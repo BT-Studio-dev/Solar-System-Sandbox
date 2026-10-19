@@ -2,9 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const M = require("../web/aero/model.js");
 
-test("Aero starts with 40 bodies and real parent-linked satellite counts", () => {
+test("Aero starts with 41 bodies and real parent-linked satellite counts", () => {
   const s = M.makeScenario();
-  assert.equal(s.bodies.length, 40);
+  assert.equal(s.bodies.length, 41);
   assert.equal(
     s.bodies.filter((b) => b.type === "moon" && b.parent === "saturn").length,
     7,
@@ -17,7 +17,7 @@ test("Aero starts with 40 bodies and real parent-linked satellite counts", () =>
     assert.ok(["x", "y", "z"].every((k) => Number.isFinite(b.pos[k]))),
   );
 });
-test("all six scenarios are valid and deterministic", () => {
+test("all scenarios are valid and deterministic", () => {
   M.SCENARIOS.forEach(([id]) => {
     const a = M.makeScenario(id),
       b = M.makeScenario(id);
@@ -27,6 +27,13 @@ test("all six scenarios are valid and deterministic", () => {
       a.bodies.length,
     );
   });
+  const trappist = M.makeScenario("trappist");
+  assert.equal(trappist.bodies.length, 8);
+  assert.equal(
+    trappist.bodies.filter((b) => b.parent === "trappist-1").length,
+    7,
+  );
+  assert.ok(trappist.bodies.every((b) => Number.isFinite(b.pos.x)));
   assert.throws(() => M.makeScenario("invalid"));
 });
 test("Kepler solver places Earth back at its start after one approximate year", () => {
@@ -72,6 +79,17 @@ test("custom worlds use live gravity while the catalog stays on rails", () => {
   assert.ok(Math.hypot(world.pos.x - start.x, world.pos.y - start.y) > 0.001);
   assert.ok(["x", "y", "z"].every((k) => Number.isFinite(world.vel[k])));
 });
+test("compact TRAPPIST-1 periods are resolved with adaptive gravity steps", () => {
+  const s = M.makeScenario("trappist");
+  s.bodies
+    .filter((b) => b.type === "terrestrial")
+    .forEach((b) => M.release(s, b));
+  for (let i = 0; i < 40; i++) M.evolve(s, 0.05);
+  assert.ok(s.days > 1.99);
+  s.bodies.forEach((b) =>
+    ["x", "y", "z"].forEach((k) => assert.ok(Number.isFinite(b.pos[k]))),
+  );
+});
 test("released primaries and released moons advance without nonfinite values", () => {
   const s = M.makeScenario("inner");
   s.bodies.forEach((b) => M.release(s, b));
@@ -100,7 +118,7 @@ test("all eight body types work in empty space and reject invalid inputs", () =>
 test("Aero save validation rejects nonfinite values, duplicate IDs and parent cycles", () => {
   const make = () => JSON.parse(JSON.stringify(M.makeScenario()));
   const good = make();
-  assert.equal(M.validateSave(good).bodies.length, 40);
+  assert.equal(M.validateSave(good).bodies.length, 41);
   const broken = make();
   broken.bodies[2].mass = Infinity;
   const duplicate = make();

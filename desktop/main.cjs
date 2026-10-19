@@ -25,7 +25,7 @@ app.whenReady().then(() => {
       minWidth: 760,
       minHeight: 520,
       backgroundColor: "#080d17",
-      title: "Solar System Sandbox",
+      title: "Solar System Sandbox 2",
       autoHideMenuBar: true,
       webPreferences: {
         nodeIntegration: false,

@@ -11,7 +11,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <title>Solar System Sandbox · Aero</title>
+    <title>Solar System Sandbox 2 · Aero</title>
     <link rel="icon" href="icon.svg" />
     <link rel="stylesheet" href="aero/aero.css" />
     <script src="aero/model.js" defer></script>
@@ -21,7 +21,7 @@
     <header class="titlebar">
       <span class="app-orbit">◉</span><strong>Solar System Sandbox</strong
       ><span class="edition"
-        >SIMULATOR · <span id="theme-name">AERO NIGHT</span></span
+        >SIMULATOR · V2 · <span id="theme-name">AERO NIGHT</span></span
       ><a href="classic.html" class="classic-link">Classic sandbox ↗</a>
     </header>
     <div class="topbar">
@@ -107,7 +107,7 @@
         ></canvas>
         <div class="scene-title">
           <h1 id="scene-name">Solar System</h1>
-          <span id="scene-count">40 bodies</span>
+          <span id="scene-count">41 bodies</span>
           <div id="tracking-badge" hidden>
             TRACKING <span></span
             ><button id="untrack" aria-label="Stop tracking">×</button>
@@ -284,7 +284,15 @@
               <button id="spawn-asteroid">Spawn asteroid</button
               ><button id="spawn-comet">Spawn comet</button
               ><button id="clear-trails">Clear trails</button
-              ><button id="empty">Empty sky</button>
+              ><button id="empty">Empty sky</button
+              ><button id="export-json">Export JSON</button
+              ><button id="import-json">Import JSON</button>
+              <input
+                id="import-file"
+                type="file"
+                accept="application/json,.json"
+                hidden
+              />
             </div>
           </div>
         </section>
@@ -386,7 +394,7 @@
       </aside>
     </main>
     <footer>
-      <span id="status">40 bodies · orbital rails · running</span
+      <span id="status">41 bodies · orbital rails · running</span
       ><span class="keyboard-hints"
         >SPACE play &nbsp; LMB pan &nbsp; RMB orbit &nbsp; wheel zoom &nbsp; C
         controls &nbsp; F1 help</span
@@ -412,8 +420,8 @@
       </div>
       <h2>Your universe, a new perspective.</h2>
       <p>
-        Inspired by your Aero simulator references. The classic sandbox is still
-        available from the title bar.
+        Version 2 adds the TRAPPIST-1 system and portable experiment files. The
+        original gravity sandbox remains available from the title bar.
       </p>
       <dl>
         <dt>Explore</dt>
@@ -439,16 +447,17 @@
           on parent-relative rails unless individually released. No collision
           merging.
         </dd>
-        <dt>Library</dt>
+        <dt>Library & portable files</dt>
         <dd>
-          Use built-in parts, save your own, change colour packs, or load the
-          binary-star scenario. The library is local; it does not load
-          executable mods.
+          Save custom parts locally, switch colour packs, or use a scenario.
+          Export/Import JSON transfers a validated version 2 experiment between
+          devices; imported files are limited to one megabyte.
         </dd>
         <dt>Controls</dt>
         <dd>
-          Space: play/pause · C: settings · F1: help · F3: theme · Escape: close
-          panels · +/−: zoom. Save/Load keep one Aero experiment on this device.
+          Space: play/pause · ←/→: select bodies · C: settings · F1: help · F3:
+          theme · Escape: close panels · +/−: zoom. Save/Load keep one local
+          experiment; Export/Import JSON transfers a portable save.
         </dd>
       </dl>
       <p class="model-note">

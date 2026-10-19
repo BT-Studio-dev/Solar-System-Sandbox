@@ -12,7 +12,12 @@ module.exports = async function testAero(browser, base) {
   try {
     await page.goto(base);
     await page.waitForSelector("#body-select option", { state: "attached" });
-    assert.equal(await page.locator("#body-select option").count(), 40);
+    assert.equal(await page.locator("#body-select option").count(), 41);
+    assert.equal(await page.locator("#body-name").textContent(), "Earth");
+    await page.locator("#universe").focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await page.locator("#body-name").textContent(), "Mars");
+    await page.keyboard.press("ArrowLeft");
     assert.equal(await page.locator("#body-name").textContent(), "Earth");
     await page.locator("#play").click();
     const epoch = await page.locator("#epoch").textContent();
@@ -29,7 +34,7 @@ module.exports = async function testAero(browser, base) {
     await page.locator("[data-type=ice]").click();
     await page.locator("#new-name").fill("Screenshot world");
     await page.locator("#add-body").click();
-    assert.equal(await page.locator("#body-select option").count(), 41);
+    assert.equal(await page.locator("#body-select option").count(), 42);
     await page.locator("[data-tab=inspect]").click();
     assert.equal(
       await page.locator("#body-name").textContent(),
@@ -44,7 +49,7 @@ module.exports = async function testAero(browser, base) {
       /active/,
     );
     await page.locator('[data-part="0"]').click();
-    assert.equal(await page.locator("#body-select option").count(), 42);
+    assert.equal(await page.locator("#body-select option").count(), 43);
     await page.locator("#save").click();
     await page.locator("#settings-btn").click();
     await page.locator("#start-date").fill("2029-11-29");
@@ -69,13 +74,51 @@ module.exports = async function testAero(browser, base) {
       "aurora",
     );
     await page.locator("#load").click();
-    assert.equal(await page.locator("#body-select option").count(), 42);
+    assert.equal(await page.locator("#body-select option").count(), 43);
     assert.equal(
       await page.locator("body").getAttribute("data-theme"),
       "night",
     );
-    await page.locator("#scenario").selectOption("inner");
+    await page.locator("#scenario").selectOption("trappist");
     await page.locator("#confirm-ok").click();
+    assert.equal(await page.locator("#body-select option").count(), 8);
+    assert.equal(await page.locator("#body-name").textContent(), "TRAPPIST-1");
+    await page.locator("[data-tab=inspect]").click();
+    await page.locator("#body-select").selectOption({ label: "TRAPPIST-1 e" });
+    assert.match(await page.locator("#body-period").textContent(), /6.10d/);
+    await page.locator("#scenario").selectOption("solar");
+    const exportReady = page.waitForEvent("download");
+    await page.locator("#export-json").click();
+    const exported = await exportReady;
+    const exportPath = ".tools/solar-system-v2-test.json";
+    await exported.saveAs(exportPath);
+    const exportedJson = require("node:fs").readFileSync(exportPath, "utf8");
+    const saveFile = JSON.parse(exportedJson);
+    assert.equal(saveFile.app, "solar-system-sandbox");
+    assert.equal(saveFile.format, 1);
+    await page.locator("#scenario").selectOption("inner");
+    if (await page.locator("#confirm-dialog").isVisible())
+      await page.locator("#confirm-ok").click();
+    assert.equal(await page.locator("#body-select option").count(), 9);
+    await page.locator("#import-file").setInputFiles(exportPath);
+    await page.waitForFunction(
+      () =>
+        document.querySelector("#scene-name").textContent === "Solar System",
+    );
+    assert.equal(await page.locator("#body-select option").count(), 41);
+    const legacySave = { ...saveFile };
+    delete legacySave.app;
+    delete legacySave.format;
+    delete legacySave.exportedAt;
+    await page.evaluate(
+      (legacy) => localStorage.setItem("aero-save-v2", JSON.stringify(legacy)),
+      legacySave,
+    );
+    await page.locator("#load").click();
+    assert.equal(await page.locator("#body-select option").count(), 41);
+    await page.locator("#scenario").selectOption("inner");
+    if (await page.locator("#confirm-dialog").isVisible())
+      await page.locator("#confirm-ok").click();
     assert.equal(await page.locator("#body-select option").count(), 9);
     await page.locator("#gravity").click();
     assert.equal(
@@ -88,17 +131,26 @@ module.exports = async function testAero(browser, base) {
     await page.locator("#body-select").selectOption("jupiter");
     await page.locator("#remove").click();
     await page.locator("#confirm-ok").click();
-    assert.equal(await page.locator("#body-select option").count(), 35);
+    assert.equal(await page.locator("#body-select option").count(), 36);
     // Invalid saves must not mutate the running model.
     await page.evaluate(() =>
       localStorage.setItem("aero-save-v2", '{"state":{"version":77}}'),
     );
     await page.locator("#load").click();
-    assert.equal(await page.locator("#body-select option").count(), 35);
+    assert.equal(await page.locator("#body-select option").count(), 36);
     assert.match(
       await page.locator("#notification").textContent(),
       /Could not load/,
     );
+    const invalidPath = ".tools/invalid-aero-v2.json";
+    require("node:fs").writeFileSync(invalidPath, '{"app":"wrong","format":1}');
+    await page.locator("#import-file").setInputFiles(invalidPath);
+    await page.waitForFunction(() =>
+      document
+        .querySelector("#notification")
+        .textContent.includes("Import rejected"),
+    );
+    assert.equal(await page.locator("#body-select option").count(), 36);
     await page.locator("#scenario").selectOption("solar");
     await page.locator("#help-btn").click();
     await page.locator("#close-help").click();
@@ -110,7 +162,7 @@ module.exports = async function testAero(browser, base) {
     assert.deepEqual(errors, []);
     assert.deepEqual(remote, []);
     console.log(
-      "PASS Aero desktop: 40 bodies, satellites, focus/follow, creation, local library, colour packs, dates, tracking, settings, themes, saves, scenarios, gravity, removal and Classic navigation; no JS errors or external requests",
+      "PASS Aero v2 desktop: Solar System and TRAPPIST-1 exoplanets, portable JSON import/export, satellites, focus/follow, creation, library, dates, themes, scenarios, gravity and Classic; no JS errors or external requests",
     );
     await page.close();
     const mobile = await browser.newContext({
@@ -128,7 +180,7 @@ module.exports = async function testAero(browser, base) {
     await touch.locator("[data-tab=create]").tap();
     await touch.locator("#new-name").fill("Touch world");
     await touch.locator("#add-body").tap();
-    assert.equal(await touch.locator("#body-select option").count(), 41);
+    assert.equal(await touch.locator("#body-select option").count(), 42);
     await touch.locator("[data-tab=inspect]").tap();
     assert.equal(
       await touch.locator("#body-name").textContent(),

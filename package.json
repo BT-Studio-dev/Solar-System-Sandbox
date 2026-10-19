@@ -1,7 +1,7 @@
 {
   "name": "solar-system-sandbox",
-  "version": "1.1.0",
-  "description": "An offline solar system gravity sandbox for Windows and Android",
+  "version": "2.0.0",
+  "description": "Version 2 offline exoplanet and solar-system simulator for Windows and Android",
   "main": "desktop/main.cjs",
   "private": true,
   "license": "MIT",

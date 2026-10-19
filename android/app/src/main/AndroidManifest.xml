@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Offline-only. No INTERNET or storage permissions. -->
-    <application android:label="Solar System Sandbox" android:theme="@android:style/Theme.Material.NoActionBar" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:supportsRtl="true" android:usesCleartextTraffic="false">
+    <application android:label="Solar System Sandbox 2" android:theme="@android:style/Theme.Material.NoActionBar" android:icon="@drawable/ic_launcher" android:allowBackup="false" android:supportsRtl="true" android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize" android:hardwareAccelerated="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
