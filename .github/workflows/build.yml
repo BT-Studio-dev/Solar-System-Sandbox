@@ -1,0 +1,103 @@
+name: Build Windows and Android
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Physics and save validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run test:ui
+
+  windows:
+    name: Windows ${{ matrix.label }} x64
+    needs: test
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: '10-11'
+            electron: '44.9.0'
+          - label: '7-legacy'
+            electron: '22.3.27'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Select Windows runtime
+        run: npm install --no-save --package-lock=false --ignore-scripts electron@${{ matrix.electron }}
+      - name: Download desktop runtime
+        run: node node_modules/electron/install.js
+      - name: Build portable executable
+        run: npx electron-builder --win portable --x64 --publish never --config.electronVersion=${{ matrix.electron }} --config.portable.artifactName=Solar-System-Sandbox-1.0.0-Windows-${{ matrix.label }}-x64.exe
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Smoke-test packaged application
+        shell: pwsh
+        run: |
+          $process = Start-Process 'dist/win-unpacked/Solar System Sandbox.exe' -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) { throw "Desktop application exited during launch (code $($process.ExitCode))" }
+          Stop-Process -Id $process.Id -Force
+      - name: Checksums
+        shell: bash
+        run: cd dist && sha256sum *.exe > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Solar-System-Sandbox-Windows-${{ matrix.label }}-x64
+          path: |
+            dist/*.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  android:
+    name: Android preview APK
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - run: npm run build:android-assets
+      - run: gradle -p android assembleDebug --no-daemon
+      - name: Package installable preview
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Solar-System-Sandbox-1.0.0-Android-preview.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose dist/*.apk
+          cd dist && sha256sum *.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Solar-System-Sandbox-Android-preview
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
