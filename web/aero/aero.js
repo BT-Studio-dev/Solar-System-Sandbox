@@ -8,6 +8,7 @@
     selected = "earth",
     tab = "inspect";
   let playing = true,
+    dimension = 3,
     rate = 1,
     width = 1,
     height = 1,
@@ -17,7 +18,7 @@
     yaw = 0,
     pitch = 0.24,
     tracking = "",
-    theme = "night",
+    theme = "glass",
     pack = "theme";
   let last = 0,
     uiTime = 0,
@@ -45,6 +46,13 @@
     "true-scale": false,
   };
   const themes = [
+    [
+      "glass",
+      "Aero Glass",
+      "Frosted midnight glass over deep space",
+      "#17263b",
+      "#67b5ff",
+    ],
     ["night", "Aero Night", "Blue glass over deep space", "#142238", "#579df4"],
     [
       "day",
@@ -489,6 +497,28 @@
       $("pack-list").append(row);
     });
   }
+  function setDimension(value, announce = true) {
+    const next = Number(value);
+    if (![1, 2, 3, 4].includes(next)) return;
+    dimension = next;
+    $("dimension").value = String(next);
+    $("dimension-cycle").textContent = next + "D";
+    $("dimension-cycle").setAttribute(
+      "aria-label",
+      "Current projection " + next + "D. Activate to switch dimensions.",
+    );
+    document.body.dataset.dimension = String(next);
+    const hints = {
+      1: "1D radial projection · distance from the system centre only.",
+      2: "2D flat projection · orbital plane, no depth tilt.",
+      3: "3D spatial projection · right-drag to rotate.",
+      4: "4D time projection · tethers show the 3D reference position.",
+    };
+    $("dimension-hint").textContent = hints[next];
+    yaw = 0;
+    pitch = next === 3 ? 0.24 : next === 4 ? 0.38 : 0;
+    if (announce) notify(hints[next]);
+  }
   function setTheme(id, announce = true) {
     theme = id;
     document.body.dataset.theme = id;
@@ -532,25 +562,44 @@
   }
   new ResizeObserver(resize).observe(canvas);
   function rotate(p) {
+    if (dimension === 1) return { x: p.x, y: 0, z: 0 };
     const x = p.x * Math.cos(yaw) - p.y * Math.sin(yaw),
       y = p.x * Math.sin(yaw) + p.y * Math.cos(yaw);
+    if (dimension === 2) return { x, y, z: 0 };
     return {
       x,
       y: y * Math.cos(pitch) - p.z * Math.sin(pitch),
       z: y * Math.sin(pitch) + p.z * Math.cos(pitch),
     };
   }
-  function screen(p) {
-    const target = state.bodies.find((b) => b.id === tracking)?.pos || {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
-    const v = rotate({
-      x: p.x - target.x,
-      y: p.y - target.y,
-      z: p.z - target.z,
-    });
+  function fourthCoordinate(b) {
+    if (!b || !b.a) return 0;
+    const period = b.period || 365.25 * Math.sqrt(Math.abs(b.a) ** 3);
+    const phase = b.phase + (state.days / period) * Math.PI * 2;
+    return Math.sin(phase) * Math.min(12, Math.sqrt(Math.abs(b.a)) * 1.3);
+  }
+  function screen(p, body = null, spatialOnly = false) {
+    const targetBody = state.bodies.find((b) => b.id === tracking) || null;
+    const target = targetBody?.pos || { x: 0, y: 0, z: 0 };
+    let delta = { x: p.x - target.x, y: p.y - target.y, z: p.z - target.z };
+    if (dimension === 1 && !spatialOnly) {
+      const radius = Math.hypot(p.x, p.y, p.z);
+      const targetRadius = Math.hypot(target.x, target.y, target.z);
+      delta = { x: radius - targetRadius, y: 0, z: 0 };
+    } else if (dimension === 4 && !spatialOnly) {
+      // A gentle 4D rotation in the x-w plane; w is a visual orbital-time coordinate.
+      const theta = (state.days / 365.25) * Math.PI * 2;
+      const w = fourthCoordinate(body) - fourthCoordinate(targetBody);
+      const x4 = delta.x * Math.cos(theta) - w * Math.sin(theta);
+      const w4 = delta.x * Math.sin(theta) + w * Math.cos(theta);
+      const perspective = 1 / Math.max(0.65, 1 + w4 * 0.012);
+      delta = {
+        x: x4 * perspective,
+        y: delta.y * perspective,
+        z: delta.z * perspective,
+      };
+    }
+    const v = rotate(delta);
     return {
       x: width / 2 + pan.x + v.x * scale * zoom,
       y: height / 2 + pan.y - v.y * scale * zoom,
@@ -582,11 +631,12 @@
     );
   }
   function bodyScreen(b) {
-    if (b.type !== "moon" || view["true-scale"] || b.live) return screen(b.pos);
+    if (b.type !== "moon" || view["true-scale"] || b.live)
+      return screen(b.pos, b);
     const parent = state.bodies.find((p) => p.id === b.parent);
-    if (!parent) return screen(b.pos);
-    const ps = screen(parent.pos),
-      ms = screen(b.pos),
+    if (!parent) return screen(b.pos, b);
+    const ps = screen(parent.pos, parent),
+      ms = screen(b.pos, b),
       dx = ms.x - ps.x,
       dy = ms.y - ps.y;
     const index = state.bodies
@@ -672,6 +722,25 @@
       p.y > height + r * 3
     )
       return;
+    if (dimension === 4) {
+      const reference = screen(b.pos, b, true);
+      if (Math.hypot(reference.x - p.x, reference.y - p.y) > 2) {
+        ctx.save();
+        ctx.strokeStyle = b.color + "66";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(reference.x, reference.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = b.color + "bb";
+        ctx.beginPath();
+        ctx.arc(reference.x, reference.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
     if (b.type === "star" || b.type === "blackhole") {
       const glow = ctx.createRadialGradient(
         p.x,
@@ -690,7 +759,7 @@
     }
     if (b.type === "comet") {
       const sun = state.bodies.find((s) => s.type === "star");
-      const sp = sun ? screen(sun.pos) : { x: width / 2, y: height / 2 };
+      const sp = sun ? screen(sun.pos, sun) : { x: width / 2, y: height / 2 };
       const angle = Math.atan2(p.y - sp.y, p.x - sp.x),
         length = Math.min(100, 20 + zoom * 6);
       const tail = ctx.createLinearGradient(
@@ -850,11 +919,14 @@
       orbitPaths.set(key, points);
     }
     points.forEach((v, i) => {
-      const p = screen({
-        x: v.x + parentPos.x,
-        y: v.y + parentPos.y,
-        z: v.z + parentPos.z,
-      });
+      const p = screen(
+        {
+          x: v.x + parentPos.x,
+          y: v.y + parentPos.y,
+          z: v.z + parentPos.z,
+        },
+        b,
+      );
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     });
@@ -929,7 +1001,7 @@
         if (!history || history.length < 2) return;
         ctx.beginPath();
         history.forEach((p, i) => {
-          const q = screen(p);
+          const q = screen(p, b);
           if (!i) ctx.moveTo(q.x, q.y);
           else ctx.lineTo(q.x, q.y);
         });
@@ -1173,6 +1245,12 @@
   ["orbits", "labels", "trails", "moons"].forEach((id) =>
     $("toggle-" + id).addEventListener("click", () => setting(id, !view[id])),
   );
+  $("dimension").addEventListener("change", (event) =>
+    setDimension(event.target.value),
+  );
+  $("dimension-cycle").addEventListener("click", () =>
+    setDimension((dimension % 4) + 1),
+  );
   $("settings-btn").addEventListener("click", () => {
     $("settings").hidden = !$("settings").hidden;
   });
@@ -1222,6 +1300,7 @@
       format: 1,
       exportedAt: new Date().toISOString(),
       state,
+      dimension,
       theme,
       pack,
       view: { ...view },
@@ -1234,6 +1313,7 @@
       !data ||
       data.app !== "solar-system-sandbox" ||
       data.format !== 1 ||
+      ![1, 2, 3, 4].includes(data.dimension) ||
       typeof data.theme !== "string" ||
       !themes.some((t) => t[0] === data.theme) ||
       !["theme", "blue", "dust"].includes(data.pack) ||
@@ -1255,6 +1335,7 @@
       ? data.selected
       : state.bodies[0]?.id || "";
     setTheme(data.theme, false);
+    setDimension(data.dimension, false);
     pack = data.pack;
     Object.keys(view).forEach((id) => {
       if (typeof data.view[id] === "boolean") setting(id, data.view[id]);
@@ -1291,6 +1372,9 @@
         stored.app = "solar-system-sandbox";
         stored.format = 1;
         stored.exportedAt = new Date().toISOString();
+        stored.dimension = [1, 2, 3, 4].includes(stored.dimension)
+          ? stored.dimension
+          : 3;
         stored.theme = themes.some((t) => t[0] === stored.theme)
           ? stored.theme
           : "night";
@@ -1493,7 +1577,13 @@
       if (hit) {
         const b = state.bodies.find((body) => body.id === hit.id);
         $("hover-tip").textContent =
-          b.name + "\n" + distance(b.pos).toFixed(3) + " AU";
+          b.name +
+          "\n" +
+          distance(b.pos).toFixed(3) +
+          " AU" +
+          (dimension === 4
+            ? "\nw: " + fourthCoordinate(b).toFixed(2) + " AU"
+            : "");
         $("hover-tip").hidden = false;
         $("hover-tip").style.left =
           Math.max(0, Math.min(width - 110, p.x - 35)) + "px";
@@ -1569,9 +1659,10 @@
     /* Optional. */
   }
   setTheme(
-    themes.some((t) => t[0] === storedTheme) ? storedTheme : "night",
+    themes.some((t) => t[0] === storedTheme) ? storedTheme : "glass",
     false,
   );
+  setDimension(3, false);
   resize();
   updateInspector();
   updateUI();

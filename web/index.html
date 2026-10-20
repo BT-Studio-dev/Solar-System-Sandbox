@@ -142,6 +142,11 @@
             title="Toggle moons"
           >
             ◉</button
+          ><button
+            id="dimension-cycle"
+            title="Cycle 1D, 2D, 3D and 4D projections"
+          >
+            3D</button
           ><button id="measure-btn" title="Object separation">↔</button
           ><span></span><button id="zoom-in" aria-label="Zoom in">+</button
           ><button id="zoom-out" aria-label="Zoom out">−</button
@@ -192,6 +197,20 @@
             <button id="set-date" class="blue">SET START DATE</button
             ><button id="date-now">NOW</button>
           </div>
+          <label class="eyebrow section-label" for="dimension"
+            >DIMENSION PROJECTION</label
+          >
+          <div class="dimension-controls">
+            <select id="dimension" aria-label="Choose dimensional projection">
+              <option value="1">1D · Radial line</option>
+              <option value="2">2D · Flat orbital plane</option>
+              <option value="3" selected>3D · Spatial view</option>
+              <option value="4">4D · Time projection</option>
+            </select>
+          </div>
+          <p id="dimension-hint" class="dimension-hint">
+            3D spatial projection · right-drag to rotate.
+          </p>
           <div class="eyebrow section-label">VIEW</div>
           <div class="check-grid">
             <label><input id="orbits" type="checkbox" checked /> Orbits</label
@@ -440,6 +459,13 @@
         <dd>
           Focus zooms toward the selected body. Follow keeps it centered. Use
           the reset-camera button to return to the overview.
+        </dd>
+        <dt>1D / 2D / 3D / 4D</dt>
+        <dd>
+          Choose a radial line, a flat orbital plane, the spatial view, or a
+          4D-inspired time projection. In 4D mode, dotted tethers link each
+          projected object to its 3D reference position; this is a
+          visualization, not physical fourth-dimensional gravity.
         </dd>
         <dt>Gravity</dt>
         <dd>

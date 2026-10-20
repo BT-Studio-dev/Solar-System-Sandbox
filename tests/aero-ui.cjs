@@ -14,6 +14,32 @@ module.exports = async function testAero(browser, base) {
     await page.waitForSelector("#body-select option", { state: "attached" });
     assert.equal(await page.locator("#body-select option").count(), 41);
     assert.equal(await page.locator("#body-name").textContent(), "Earth");
+    assert.equal(
+      await page.locator("body").getAttribute("data-theme"),
+      "glass",
+    );
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "3",
+    );
+    await page.locator("#dimension-cycle").click();
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "4",
+    );
+    await page.locator("#dimension-cycle").click();
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "1",
+    );
+    await page.locator("#settings-btn").click();
+    await page.locator("#dimension").selectOption("2");
+    assert.match(
+      await page.locator("#dimension-hint").textContent(),
+      /2D flat/,
+    );
+    await page.locator("#dimension").selectOption("3");
+    await page.locator("#close-settings").click();
     await page.locator("#universe").focus();
     await page.keyboard.press("ArrowRight");
     assert.equal(await page.locator("#body-name").textContent(), "Mars");
@@ -50,6 +76,11 @@ module.exports = async function testAero(browser, base) {
     );
     await page.locator('[data-part="0"]').click();
     assert.equal(await page.locator("#body-select option").count(), 43);
+    await page.locator("#dimension-cycle").click();
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "4",
+    );
     await page.locator("#save").click();
     await page.locator("#settings-btn").click();
     await page.locator("#start-date").fill("2029-11-29");
@@ -68,16 +99,26 @@ module.exports = async function testAero(browser, base) {
     assert.match(await page.locator("#separation-au").textContent(), /AU/);
     await page.locator("#close-settings").click();
     await page.locator("#themes-btn").click();
+    assert.equal(await page.locator("[data-theme-choice]").count(), 6);
     await page.locator("[data-theme-choice=aurora]").click();
     assert.equal(
       await page.locator("body").getAttribute("data-theme"),
       "aurora",
     );
+    await page.locator("#dimension-cycle").click();
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "1",
+    );
     await page.locator("#load").click();
     assert.equal(await page.locator("#body-select option").count(), 43);
     assert.equal(
       await page.locator("body").getAttribute("data-theme"),
-      "night",
+      "glass",
+    );
+    assert.equal(
+      await page.locator("body").getAttribute("data-dimension"),
+      "4",
     );
     await page.locator("#scenario").selectOption("trappist");
     await page.locator("#confirm-ok").click();
@@ -96,6 +137,7 @@ module.exports = async function testAero(browser, base) {
     const saveFile = JSON.parse(exportedJson);
     assert.equal(saveFile.app, "solar-system-sandbox");
     assert.equal(saveFile.format, 1);
+    assert.equal(saveFile.dimension, 4);
     await page.locator("#scenario").selectOption("inner");
     if (await page.locator("#confirm-dialog").isVisible())
       await page.locator("#confirm-ok").click();

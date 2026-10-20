@@ -2,6 +2,7 @@
 
 ## 2.0.0 — Aero Observatory
 
+- Added a dark frosted-glass Aero theme and selectable 1D radial, 2D flat, and 3D spatial projections, plus an explicitly illustrative 4D time-axis projection with reference tethers.
 - Added TRAPPIST-1: an exoplanet scenario with seven worlds and approximate published orbital periods, radii, and masses.
 - Expanded the Solar System catalogue with the interstellar visitor 1I/Oumuamua.
 - Added portable, versioned JSON export/import so experiments can be moved between device profiles. Imports are size-limited and validated before changing the current session.

@@ -1,6 +1,6 @@
 # Solar System Sandbox — Aero Simulator
 
-**Version 2.0** is a major offline simulator update inspired by your Aero Night screenshots. Explore 41 solar-system bodies plus the seven worlds of the TRAPPIST-1 exoplanet system; choose from seven scenarios; create worlds; save portable JSON experiments; browse local planet presets; and switch among five themes. The original gravity sandbox remains available as **Classic sandbox**.
+**Version 2.0** is a major offline simulator update inspired by your Aero Night screenshots. Explore 41 solar-system bodies plus the seven worlds of the TRAPPIST-1 exoplanet system; choose from seven scenarios; create worlds; save portable JSON experiments; browse local planet presets; and switch among six themes, including dark frosted Aero Glass. Select 1D radial, 2D flat, 3D spatial, or an explicitly illustrative 4D-inspired time projection. The original gravity sandbox remains available as **Classic sandbox**.
 
 ## Try it now
 
@@ -27,7 +27,8 @@ This major release adds the TRAPPIST-1 exoplanet system, the interstellar visito
 - Orbit and motion-trail visibility, moon names, axes, true display sizes, auto tracking, distance measurement, zoom, pan and 3D view orbit.
 - Local, validated save/load plus portable, versioned JSON import/export to move experiments between devices. Invalid imports are rejected without replacing your current session.
 - A persistent, bounded local library of user planet parts. Three built-in sample parts.
-- Theme-colour, Deep Blue and Warm Dusk procedural color packs. Five UI themes: Aero Night/Day, Luna Blue, Aurora and High Contrast.
+- Theme-colour, Deep Blue and Warm Dusk procedural color packs. Six UI themes: dark frosted Aero Glass, Aero Night/Day, Luna Blue, Aurora and High Contrast.
+- Four switchable dimensional projections: 1D radial line, 2D flat plane, 3D spatial camera, and a 4D-inspired time-axis visualization. The fourth-axis projection is illustrative, not a claim about physical 4D motion.
 - Responsive mouse, keyboard and touch layouts; context help; no off-device requests.
 
 ## Windows EXE and Android APK
